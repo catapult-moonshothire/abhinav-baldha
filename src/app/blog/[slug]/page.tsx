@@ -1,5 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
-
 import MainContainer from "@/components/layout/main-container";
 import { supabase } from "@/lib/supabase";
 import { Metadata } from "next";
@@ -12,6 +10,8 @@ interface BlogPost {
   created_at: string;
   slug: string;
 }
+
+export const revalidate = 3600 * 2; // Revalidate every hour
 
 export async function generateStaticParams() {
   const { data, error } = await supabase.from("blog_posts").select("slug");

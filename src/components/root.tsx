@@ -17,6 +17,8 @@ export const metadata: Metadata = {
   description: "A collection of my blog posts.",
 };
 
+export const revalidate = 3600 * 2; // Revalidate every hour
+
 export default async function BlogListPage() {
   const { data, error } = await supabase
     .from("blog_posts")
