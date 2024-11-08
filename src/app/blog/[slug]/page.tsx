@@ -12,6 +12,7 @@ interface BlogPost {
   content: string;
   content_preview: string;
   created_at: string;
+  slug: string;
 }
 
 const BlogPostPage: React.FC = () => {
@@ -21,19 +22,19 @@ const BlogPostPage: React.FC = () => {
 
   useEffect(() => {
     const fetchBlogPost = async () => {
-      if (!params.id) {
-        setError("No blog post ID provided");
+      if (!params.slug) {
+        setError("No blog post slug provided");
         return;
       }
 
-      const id = Array.isArray(params.id) ? params.id[0] : params.id;
-      console.log("Blog post ID:", id);
+      const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
+      console.log("Blog post slug:", slug);
 
       try {
         const { data, error } = await supabase
           .from("blog_posts")
           .select("*")
-          .eq("id", id)
+          .eq("slug", slug)
           .single();
 
         if (error) {
@@ -51,7 +52,7 @@ const BlogPostPage: React.FC = () => {
     };
 
     fetchBlogPost();
-  }, [params.id]);
+  }, [params.slug]);
 
   if (error) {
     return (
@@ -67,9 +68,6 @@ const BlogPostPage: React.FC = () => {
   if (!blogPost) {
     return (
       <MainContainer>
-        {/* <main className="prose mx-auto flex-1 w-full max-w-4xl relative z-10">
-          <h1 className="text-xl font-bold">Loading...</h1>
-        </main> */}
         <Spinner />
       </MainContainer>
     );

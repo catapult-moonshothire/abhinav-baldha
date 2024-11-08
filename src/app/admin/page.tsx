@@ -19,7 +19,6 @@ export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [posts, setPosts] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -53,7 +52,7 @@ export default function Admin() {
         setError("Invalid credentials");
       }
     } catch (err) {
-      setError("An error occurred. Please try again.");
+      setError(`An error occurred. Please try again.,${err}`);
     } finally {
       setLoading(false);
     }
@@ -67,7 +66,7 @@ export default function Admin() {
         setError("Failed to logout. Please try again.");
       }
     } catch (err) {
-      setError("An error occurred. Please try again.");
+      setError(`An error occurred. Please try again.,${err}`);
     }
   };
 
@@ -75,14 +74,11 @@ export default function Admin() {
     setLoading(true);
     try {
       const response = await fetch("/api/blogs");
-      if (response.ok) {
-        const data = await response.json();
-        setPosts(data);
-      } else {
+      if (!response.ok) {
         setError("Failed to fetch candidate data");
       }
     } catch (err) {
-      setError("An error occurred while fetching candidate data");
+      setError(`An error occurred while fetching candidate data. ${err}`);
     } finally {
       setLoading(false);
     }
@@ -156,7 +152,7 @@ export default function Admin() {
           ) : error ? (
             <p className="text-red-500">{error}</p>
           ) : (
-            <BlogPostDisplay posts={posts} />
+            <BlogPostDisplay />
           )}
         </div>
       </MainContainer>

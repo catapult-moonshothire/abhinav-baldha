@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   if (username === FIXED_USERNAME && password === FIXED_PASSWORD) {
     const token = sign({ username }, JWT_SECRET, { expiresIn: "1h" });
 
-    cookies().set("auth_token", token, {
+    (await cookies()).set("auth_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",

@@ -7,11 +7,7 @@ const Header = () => (
     <div>
       <NameTransition />
       <div className="flex space-x-4 mt-3 text-sm text-gray-600">
-        <Link href="" className="no-underline">
-          Founder
-        </Link>
         <span>Writer</span>
-        <span>Painter</span>
       </div>
     </div>
     <Link href="https://x.com/" className="no-underline text-2xl">

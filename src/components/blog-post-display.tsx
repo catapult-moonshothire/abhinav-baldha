@@ -12,7 +12,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/helper";
 import {
   Dialog,
@@ -44,6 +43,7 @@ interface BlogPost {
   created_at: string;
   author: string;
   views: number;
+  slug: string;
 }
 
 const Sidebar = ({
@@ -89,12 +89,13 @@ const BlogPostTable = ({
 }: {
   posts: BlogPost[];
   onEdit: (post: BlogPost) => void;
-  onDelete: (postId: string) => void;
+  onDelete: (slug: string) => void;
 }) => (
   <Table>
     <TableHeader>
       <TableRow>
         <TableHead>Title</TableHead>
+        <TableHead>Slug</TableHead>
         <TableHead>Author</TableHead>
         <TableHead>Views</TableHead>
         <TableHead>Created At</TableHead>
@@ -107,6 +108,7 @@ const BlogPostTable = ({
           <TableCell>
             <BlogPostDetailsDialog post={post} />
           </TableCell>
+          <TableCell>{post.slug}</TableCell>
           <TableCell>{post.author}</TableCell>
           <TableCell>{post.views}</TableCell>
           <TableCell>{formatDate(post.created_at)}</TableCell>
@@ -122,7 +124,7 @@ const BlogPostTable = ({
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => onDelete(post.id)}
+              onClick={() => onDelete(post.slug)}
               className="text-red-600"
             >
               <Trash className="h-5 w-5" />
@@ -168,7 +170,13 @@ export default function BlogPostDisplay() {
   const [content, setContent] = useState<Content>("");
   const [isLoading, setIsLoading] = useState(true);
 
-  const { register, handleSubmit, reset, setValue } = useForm<BlogPost>();
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setError,
+    formState: { errors },
+  } = useForm<BlogPost>();
 
   useEffect(() => {
     fetchPosts();
@@ -201,13 +209,28 @@ export default function BlogPostDisplay() {
   };
 
   const handleAddPost = async (data: BlogPost) => {
+    // Check if slug is unique
+    const { data: existingPost } = await supabase
+      .from("blog_posts")
+      .select("slug")
+      .eq("slug", data.slug)
+      .single();
+
+    if (existingPost) {
+      setError("slug", {
+        type: "manual",
+        message: "This slug is already in use",
+      });
+      return;
+    }
+
     const { data: newPost, error } = await supabase
       .from("blog_posts")
       .insert([
         {
           ...data,
           content: content,
-          content_preview: content.toString().slice(0, 200),
+          content_preview: content?.toString().slice(0, 200),
           views: 0,
         },
       ])
@@ -228,14 +251,32 @@ export default function BlogPostDisplay() {
 
   const handleEditPost = async (updatedData: BlogPost) => {
     if (!currentPost) return;
+
+    // Check if slug is unique (excluding the current post)
+    if (updatedData.slug !== currentPost.slug) {
+      const { data: existingPost } = await supabase
+        .from("blog_posts")
+        .select("slug")
+        .eq("slug", updatedData.slug)
+        .single();
+
+      if (existingPost) {
+        setError("slug", {
+          type: "manual",
+          message: "This slug is already in use",
+        });
+        return;
+      }
+    }
+
     const { data: updatedPost, error } = await supabase
       .from("blog_posts")
       .update({
         ...updatedData,
         content: content,
-        content_preview: content.toString().slice(0, 200),
+        content_preview: content?.toString().slice(0, 200),
       })
-      .eq("id", currentPost.id)
+      .eq("slug", currentPost.slug)
       .single();
 
     if (updatedPost) {
@@ -251,11 +292,11 @@ export default function BlogPostDisplay() {
     setContent("");
   };
 
-  const handleDeletePost = async (postId: string) => {
+  const handleDeletePost = async (slug: string) => {
     const { error } = await supabase
       .from("blog_posts")
       .delete()
-      .eq("id", postId);
+      .eq("slug", slug);
     if (!error) {
       toast.success("Post deleted successfully");
     } else {
@@ -351,12 +392,32 @@ export default function BlogPostDisplay() {
             >
               <Input
                 placeholder="Title"
-                {...register("title", { required: true })}
+                {...register("title", { required: "Title is required" })}
               />
+              {errors.title && (
+                <p className="text-red-500">{errors.title.message}</p>
+              )}
+              <Input
+                placeholder="Slug"
+                {...register("slug", {
+                  required: "Slug is required",
+                  pattern: {
+                    value: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+                    message:
+                      "Slug must be lowercase, numbers, and hyphens only",
+                  },
+                })}
+              />
+              {errors.slug && (
+                <p className="text-red-500">{errors.slug.message}</p>
+              )}
               <Input
                 placeholder="Author"
-                {...register("author", { required: true })}
+                {...register("author", { required: "Author is required" })}
               />
+              {errors.author && (
+                <p className="text-red-500">{errors.author.message}</p>
+              )}
               <MinimalTiptapEditor
                 value={content}
                 onChange={setContent}
