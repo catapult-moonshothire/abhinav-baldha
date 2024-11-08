@@ -1,10 +1,8 @@
-"use client";
+/* eslint-disable @next/next/no-img-element */
 
 import MainContainer from "@/components/layout/main-container";
-import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { useParams } from "next/navigation";
-import { Spinner } from "@/components/ui/spinner";
+import { Metadata } from "next";
 
 interface BlogPost {
   id: string;
@@ -15,63 +13,64 @@ interface BlogPost {
   slug: string;
 }
 
-const BlogPostPage: React.FC = () => {
-  const params = useParams();
-  const [blogPost, setBlogPost] = useState<BlogPost | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchBlogPost = async () => {
-      if (!params.slug) {
-        setError("No blog post slug provided");
-        return;
-      }
-
-      const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug;
-      console.log("Blog post slug:", slug);
-
-      try {
-        const { data, error } = await supabase
-          .from("blog_posts")
-          .select("*")
-          .eq("slug", slug)
-          .single();
-
-        if (error) {
-          setError("Failed to fetch blog post");
-          console.error(error);
-        } else if (data) {
-          setBlogPost(data);
-        } else {
-          setError("Blog post not found");
-        }
-      } catch (err) {
-        setError("An error occurred while fetching the blog post");
-        console.error(err);
-      }
-    };
-
-    fetchBlogPost();
-  }, [params.slug]);
+export async function generateStaticParams() {
+  const { data, error } = await supabase.from("blog_posts").select("slug");
 
   if (error) {
+    console.error("Error fetching blog post slugs:", error);
+    return [];
+  }
+
+  return data?.map((post) => ({ slug: post.slug })) || [];
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: { slug: string };
+}): Promise<Metadata> {
+  const { data: blogPost } = await supabase
+    .from("blog_posts")
+    .select("*")
+    .eq("slug", params.slug)
+    .single();
+
+  if (!blogPost) {
+    return {
+      title: "Blog Post Not Found",
+    };
+  }
+
+  return {
+    title: `${blogPost?.title} - My Blog`,
+    description: blogPost?.content_preview,
+  };
+}
+
+export default async function BlogPostPage({
+  params,
+}: {
+  params: { slug: string };
+}) {
+  const { data, error } = await supabase
+    .from("blog_posts")
+    .select("*")
+    .eq("slug", params.slug)
+    .single();
+
+  if (error) {
+    console.error("Error fetching blog post:", error);
     return (
       <MainContainer>
         <main className="prose mx-auto flex-1 w-full max-w-4xl relative z-10">
           <h1 className="text-xl font-bold">Error</h1>
-          <p>{error}</p>
+          <p>Failed to fetch the blog post.</p>
         </main>
       </MainContainer>
     );
   }
 
-  if (!blogPost) {
-    return (
-      <MainContainer>
-        <Spinner />
-      </MainContainer>
-    );
-  }
+  const blogPost = data as BlogPost;
 
   return (
     <MainContainer>
@@ -86,6 +85,4 @@ const BlogPostPage: React.FC = () => {
       </main>
     </MainContainer>
   );
-};
-
-export default BlogPostPage;
+}
