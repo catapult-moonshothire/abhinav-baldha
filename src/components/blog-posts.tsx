@@ -2,13 +2,16 @@ import { supabase } from "@/lib/supabase";
 import { Spinner } from "@/components/ui/spinner";
 import Link from "next/link";
 import { Metadata } from "next";
+import { isNewPost } from "@/lib/helper";
 
 interface BlogPost {
+  label: string;
   id: string;
   title: string;
   content: string;
   content_preview: string;
   created_at: string;
+  updated_at?: string;
   slug: string;
 }
 
@@ -39,14 +42,6 @@ export default async function BlogListPage() {
 
   const blogPosts = data as BlogPost[];
 
-  const isNewPost = (created_at: string) => {
-    const postDate = new Date(created_at);
-    const currentDate = new Date();
-    const differenceInDays =
-      (currentDate.getTime() - postDate.getTime()) / (1000 * 3600 * 24);
-    return differenceInDays <= 10;
-  };
-
   return (
     <>
       <main className="prose mx-auto flex-1 w-full max-w-4xl relative z-10">
@@ -62,13 +57,16 @@ export default async function BlogListPage() {
                 >
                   {post.title}
                 </Link>
-                {isNewPost(post.created_at) && (
+                {post?.label == "new" && isNewPost(post.created_at) && (
                   <span className="inline-flex items-center rounded-full bg-[#ff6b6b] px-1.5 py-0.5 text-xs font-medium text-white uppercase ml-3 mt-0.5">
                     New
                   </span>
                 )}
                 <span className="ml-3 text-sm text-primary/50 font-normal">
-                  {new Date(post.created_at).getFullYear()}
+                  {new Date(post.created_at).toLocaleDateString("en-US", {
+                    month: "2-digit",
+                    year: "numeric",
+                  })}
                 </span>
               </h2>
             </div>

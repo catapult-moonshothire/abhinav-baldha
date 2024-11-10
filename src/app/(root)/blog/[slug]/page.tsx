@@ -1,6 +1,7 @@
 import MainContainer from "@/components/layout/main-container";
 import { supabase } from "@/lib/supabase";
 import { Metadata } from "next";
+import Link from "next/link";
 
 interface BlogPost {
   id: string;
@@ -74,12 +75,20 @@ export default async function BlogPostPage({
 
   return (
     <MainContainer>
-      <main className="prose mx-auto flex-1 w-full max-w-4xl relative z-10">
+      <main className="prose mx-auto flex-1 w-full max-w-3xl fobol p-4 sm:p-8 relative z-10">
+        <header className="mt-8 mb-6">
+          {new Date(blogPost?.created_at).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          })}{" "}
+          by <Link href="/">Abhinav Baldha</Link>
+        </header>
         <h1 className="text-3xl sm:text-4xl font-extrabold">
           {blogPost.title}
         </h1>
         <div
-          className="mt-4"
+          className="mt-4 "
           dangerouslySetInnerHTML={{ __html: blogPost.content }}
         />
       </main>

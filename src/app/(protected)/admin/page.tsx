@@ -8,10 +8,10 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "../../components/ui/card";
-import { Input } from "../../components/ui/input";
-import { Button } from "../../components/ui/button";
-import { Spinner } from "../../components/ui/spinner";
+} from "../../../components/ui/card";
+import { Input } from "../../../components/ui/input";
+import { Button } from "../../../components/ui/button";
+import { Spinner } from "../../../components/ui/spinner";
 import BlogPostDisplay from "@/components/blog-post-display";
 import MainContainer from "@/components/layout/main-container";
 
@@ -86,8 +86,8 @@ export default function Admin() {
 
   if (!isAuthenticated) {
     return (
-      <div className="flex h-[calc(100vh-248px)] -mt-12 items-center justify-center">
-        <Card className="mt-16 w-[350px]">
+      <div className="flex h-[calc(100vh-248px)] mt-12 items-center justify-center">
+        <Card className="mt-16 w-96">
           <CardHeader>
             <CardTitle>Login</CardTitle>
             <CardDescription>
@@ -142,7 +142,7 @@ export default function Admin() {
       <Head>
         <meta name="robots" content="noindex" />
       </Head>
-      <MainContainer className="-mt-8" large={true}>
+      <MainContainer className="pt-8" large={true}>
         <div className="">
           <div className="flex items-center px-4 justify-end">
             <Button onClick={handleLogout}>Logout</Button>

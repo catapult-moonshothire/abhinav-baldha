@@ -68,3 +68,7 @@
 ::selection {
   @apply bg-primary text-secondary;
 }
+
+strong {
+  font-weight: 700 !important;
+}
