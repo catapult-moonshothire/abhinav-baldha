@@ -14,6 +14,7 @@ import { Button } from "../../../components/ui/button";
 import { Spinner } from "../../../components/ui/spinner";
 import BlogPostDisplay from "@/components/blog-post-display";
 import MainContainer from "@/components/layout/main-container";
+import Link from "next/link";
 
 export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -144,7 +145,10 @@ export default function Admin() {
       </Head>
       <MainContainer className="pt-8" large={true}>
         <div className="">
-          <div className="flex items-center px-4 justify-end">
+          <div className="flex items-center px-4 gap-2 justify-end">
+            <Link href="/">
+              <Button variant={"secondary"}>Home</Button>
+            </Link>
             <Button onClick={handleLogout}>Logout</Button>
           </div>
           {loading ? (

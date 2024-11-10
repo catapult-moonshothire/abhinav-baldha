@@ -31,6 +31,18 @@ import { BlogPost } from "@/lib/types";
 import Sidebar from "./layout/sidebar";
 import BlogPostTable from "./blog-post-table";
 
+async function triggerPurge() {
+  try {
+    const response = await fetch("/api/purge", { method: "POST" });
+    if (!response.ok) {
+      throw new Error("Failed to purge cache");
+    }
+    console.log("Cache purged successfully");
+  } catch (error) {
+    console.error("Error purging cache:", error);
+  }
+}
+
 export default function BlogPostDisplay() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -123,6 +135,7 @@ export default function BlogPostDisplay() {
 
     if (newPost) {
       toast.success("Post added successfully");
+      await triggerPurge();
     }
     if (error) {
       console.error(error);
@@ -167,6 +180,7 @@ export default function BlogPostDisplay() {
 
     if (updatedPost) {
       toast.success("Post updated successfully");
+      await triggerPurge();
     }
     if (error) {
       console.error(error);
@@ -185,6 +199,7 @@ export default function BlogPostDisplay() {
       .eq("slug", slug);
     if (!error) {
       toast.success("Post deleted successfully");
+      await triggerPurge();
     } else {
       console.error(error);
       toast.error("Failed to delete post");

@@ -20,8 +20,6 @@ export const metadata: Metadata = {
   description: "A collection of my blog posts.",
 };
 
-export const revalidate = 3600 * 2; // Revalidate every hour
-
 export default async function BlogListPage() {
   const { data, error } = await supabase
     .from("blog_posts")
@@ -57,7 +55,7 @@ export default async function BlogListPage() {
                 >
                   {post.title}
                 </Link>
-                {post?.label == "new" && isNewPost(post.created_at) && (
+                {post?.label === "new" && isNewPost(post.created_at) && (
                   <span className="inline-flex items-center rounded-full bg-[#ff6b6b] px-1.5 py-0.5 text-xs font-medium text-white uppercase ml-3 mt-0.5">
                     New
                   </span>
