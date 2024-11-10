@@ -14,3 +14,13 @@ export const isNewPost = (created_at: string) => {
     (currentDate.getTime() - postDate.getTime()) / (1000 * 3600 * 24);
   return differenceInDays <= 30;
 };
+
+export const handleError = (error: any, toast: any) => {
+  const message = error?.message || "An unexpected error occurred";
+  console.error(error);
+  toast({
+    variant: "destructive",
+    title: "Error",
+    description: message,
+  });
+};

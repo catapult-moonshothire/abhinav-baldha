@@ -3,16 +3,7 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Edit, Menu, Plus, Trash, RefreshCw, X } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { formatDate } from "@/lib/helper";
+import { Edit, Loader2, Menu, Plus, RefreshCw, Trash, X } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -21,25 +12,42 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
-import { useForm, Controller } from "react-hook-form";
-import { MinimalTiptapEditor } from "@/components/minimal-tiptap";
-import { Content } from "@tiptap/react";
-import { toast } from "sonner";
+import { useForm } from "react-hook-form";
 import { BlogPost } from "@/lib/types";
 import Sidebar from "./layout/sidebar";
-import BlogPostTable from "./blog-post-table";
+// import BlogPostTable from "./blog-post-table";
+import { useToast } from "@/hooks/use-toast";
+import { Content } from "@tiptap/react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./ui/alert-dialog";
+import BlogPostTable from "./new-blog-post-table";
+import FullScreenEditor from "./fullscreen-editor";
+import { handleError } from "@/lib/helper";
 
 async function triggerPurge() {
   try {
-    const response = await fetch("/api/purge", { method: "POST" });
+    const response = await fetch("/api/purge", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
     if (!response.ok) {
-      throw new Error("Failed to purge cache");
+      throw new Error(`Failed to purge cache: ${response.statusText}`);
     }
-    console.log("Cache purged successfully");
+    return true;
   } catch (error) {
     console.error("Error purging cache:", error);
+    return false;
   }
 }
 
@@ -50,6 +58,15 @@ export default function BlogPostDisplay() {
   const [currentPost, setCurrentPost] = useState<BlogPost | null>(null);
   const [content, setContent] = useState<Content>("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    slug: string | null;
+  }>({
+    isOpen: false,
+    slug: null,
+  });
+  const { toast } = useToast();
 
   const {
     register,
@@ -59,13 +76,17 @@ export default function BlogPostDisplay() {
     control,
     watch,
     setValue,
-    formState: { errors },
-  } = useForm<BlogPost>();
+    formState: { errors, isValid },
+  } = useForm<BlogPost>({
+    mode: "onChange",
+  });
 
   const title = watch("title");
 
   useEffect(() => {
     fetchPosts();
+
+    // Set up real-time subscription
     const subscription = supabase
       .channel("blog_posts")
       .on(
@@ -95,69 +116,33 @@ export default function BlogPostDisplay() {
 
   const fetchPosts = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase
-      .from("blog_posts")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (data) setPosts(data);
-    if (error) console.error(error);
-    setIsLoading(false);
+    try {
+      const { data, error } = await supabase
+        .from("blog_posts")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setPosts(data || []);
+    } catch (error) {
+      handleError(error, toast);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleAddPost = async (data: BlogPost) => {
-    // Check if slug is unique
-    const { data: existingPost } = await supabase
-      .from("blog_posts")
-      .select("slug")
-      .eq("slug", data.slug)
-      .single();
+    try {
+      setIsSubmitting(true);
 
-    if (existingPost) {
-      setError("slug", {
-        type: "manual",
-        message: "This slug is already in use",
-      });
-      return;
-    }
-
-    const { data: newPost, error } = await supabase
-      .from("blog_posts")
-      .insert([
-        {
-          ...data,
-          content: content,
-          content_preview: content?.toString().slice(0, 200),
-          views: 0,
-          updated_at: new Date().toISOString(),
-        },
-      ])
-      .single();
-
-    if (newPost) {
-      toast.success("Post added successfully");
-      await triggerPurge();
-    }
-    if (error) {
-      console.error(error);
-      toast.error("Failed to add post");
-    }
-    setIsEditing(false);
-    reset();
-    setContent("");
-    fetchPosts();
-  };
-
-  const handleEditPost = async (updatedData: BlogPost) => {
-    if (!currentPost) return;
-
-    // Check if slug is unique (excluding the current post)
-    if (updatedData.slug !== currentPost.slug) {
-      const { data: existingPost } = await supabase
+      // Check if slug is unique
+      const { data: existingPost, error: checkError } = await supabase
         .from("blog_posts")
         .select("slug")
-        .eq("slug", updatedData.slug)
+        .eq("slug", data.slug)
         .single();
 
+      if (checkError && checkError.code !== "PGRST116") throw checkError;
       if (existingPost) {
         setError("slug", {
           type: "manual",
@@ -165,44 +150,127 @@ export default function BlogPostDisplay() {
         });
         return;
       }
-    }
 
-    const { data: updatedPost, error } = await supabase
-      .from("blog_posts")
-      .update({
-        ...updatedData,
-        content: content,
-        content_preview: content?.toString().slice(0, 200),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("slug", currentPost.slug)
-      .single();
+      const { data: newPost, error } = await supabase
+        .from("blog_posts")
+        .insert([
+          {
+            ...data,
+            content: content,
+            content_preview: content?.toString().slice(0, 200),
+            views: 0,
+            updated_at: new Date().toISOString(),
+          },
+        ])
+        .single();
 
-    if (updatedPost) {
-      toast.success("Post updated successfully");
-      await triggerPurge();
+      if (error) throw error;
+
+      const purgeSuccess = await triggerPurge();
+
+      toast({
+        title: "Success",
+        description:
+          "Post added successfully" +
+          (!purgeSuccess ? " (cache purge failed)" : ""),
+        variant: purgeSuccess ? "default" : "destructive",
+      });
+
+      setIsEditing(false);
+      reset();
+      setContent("");
+      await fetchPosts();
+    } catch (error) {
+      handleError(error, toast);
+    } finally {
+      setIsSubmitting(false);
     }
-    if (error) {
-      console.error(error);
-      toast.error("Failed to update post");
+  };
+
+  const handleEditPost = async (updatedData: BlogPost) => {
+    if (!currentPost) return;
+
+    try {
+      setIsSubmitting(true);
+
+      // Check if slug is unique (excluding the current post)
+      if (updatedData.slug !== currentPost.slug) {
+        const { data: existingPost, error: checkError } = await supabase
+          .from("blog_posts")
+          .select("slug")
+          .eq("slug", updatedData.slug)
+          .single();
+
+        if (checkError && checkError.code !== "PGRST116") throw checkError;
+        if (existingPost) {
+          setError("slug", {
+            type: "manual",
+            message: "This slug is already in use",
+          });
+          return;
+        }
+      }
+
+      const { error } = await supabase
+        .from("blog_posts")
+        .update({
+          ...updatedData,
+          content: content,
+          content_preview: content?.toString().slice(0, 200),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("slug", currentPost.slug);
+
+      if (error) throw error;
+
+      const purgeSuccess = await triggerPurge();
+
+      toast({
+        title: "Success",
+        description:
+          "Post updated successfully" +
+          (!purgeSuccess ? " (cache purge failed)" : ""),
+        variant: purgeSuccess ? "default" : "destructive",
+      });
+
+      setIsEditing(false);
+      setCurrentPost(null);
+      reset();
+      setContent("");
+      await fetchPosts();
+    } catch (error) {
+      handleError(error, toast);
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsEditing(false);
-    setCurrentPost(null);
-    reset();
-    setContent("");
   };
 
   const handleDeletePost = async (slug: string) => {
-    const { error } = await supabase
-      .from("blog_posts")
-      .delete()
-      .eq("slug", slug);
-    if (!error) {
-      toast.success("Post deleted successfully");
-      await triggerPurge();
-    } else {
-      console.error(error);
-      toast.error("Failed to delete post");
+    try {
+      setIsSubmitting(true);
+
+      const { error } = await supabase
+        .from("blog_posts")
+        .delete()
+        .eq("slug", slug);
+
+      if (error) throw error;
+
+      const purgeSuccess = await triggerPurge();
+
+      toast({
+        title: "Success",
+        description:
+          "Post deleted successfully" +
+          (!purgeSuccess ? " (cache purge failed)" : ""),
+        variant: purgeSuccess ? "default" : "destructive",
+      });
+
+      await fetchPosts();
+    } catch (error) {
+      handleError(error, toast);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -220,6 +288,57 @@ export default function BlogPostDisplay() {
     setIsEditing(true);
   };
 
+  const handleCancel = () => {
+    if (isSubmitting) return;
+    setIsEditing(false);
+    setCurrentPost(null);
+    reset();
+    setContent("");
+  };
+
+  const initiateDelete = (slug: string) => {
+    setDeleteConfirmation({
+      isOpen: true,
+      slug: slug,
+    });
+  };
+
+  const handleDeleteConfirmed = async () => {
+    if (!deleteConfirmation.slug) return;
+
+    try {
+      setIsSubmitting(true);
+
+      const { error } = await supabase
+        .from("blog_posts")
+        .delete()
+        .eq("slug", deleteConfirmation.slug);
+
+      if (error) throw error;
+
+      const purgeSuccess = await triggerPurge();
+
+      toast({
+        title: "Success",
+        description:
+          "Post deleted successfully" +
+          (!purgeSuccess ? " (cache purge failed)" : ""),
+        variant: purgeSuccess ? "default" : "destructive",
+      });
+
+      await fetchPosts();
+    } catch (error) {
+      handleError(error, toast);
+    } finally {
+      setIsSubmitting(false);
+      setDeleteConfirmation({ isOpen: false, slug: null });
+    }
+  };
+
+  const handleDeleteCancelled = () => {
+    setDeleteConfirmation({ isOpen: false, slug: null });
+  };
+
   return (
     <div className="flex min-h-[calc(100vh-120px)] bg-background">
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
@@ -231,6 +350,7 @@ export default function BlogPostDisplay() {
               size="icon"
               onClick={() => setIsSidebarOpen(true)}
               className="md:hidden"
+              disabled={isSubmitting}
             >
               <Menu className="h-5 w-5" />
             </Button>
@@ -242,13 +362,20 @@ export default function BlogPostDisplay() {
               size="icon"
               onClick={fetchPosts}
               className="flex items-center justify-center"
-              disabled={isLoading}
+              disabled={isLoading || isSubmitting}
             >
               <RefreshCw
-                className={cn("h-4 w-4", isLoading && "animate-spin")}
+                className={cn(
+                  "h-4 w-4",
+                  (isLoading || isSubmitting) && "animate-spin"
+                )}
               />
             </Button>
-            <Button variant="default" onClick={openEditorForAdd}>
+            <Button
+              variant="default"
+              onClick={openEditorForAdd}
+              disabled={isSubmitting}
+            >
               <Plus className="mr-2 h-5 w-5" /> New Post
             </Button>
           </div>
@@ -262,10 +389,12 @@ export default function BlogPostDisplay() {
               onSubmit={handleSubmit(
                 currentPost ? handleEditPost : handleAddPost
               )}
-              onCancel={() => setIsEditing(false)}
+              onCancel={handleCancel}
               register={register}
               errors={errors}
               control={control}
+              isSubmitting={isSubmitting}
+              isValid={isValid}
             />
           ) : (
             <Card>
@@ -277,13 +406,14 @@ export default function BlogPostDisplay() {
                 <ScrollArea className="h-[calc(100vh-340px)]">
                   {isLoading ? (
                     <div className="flex items-center justify-center h-full">
-                      <RefreshCw className="h-8 w-8 animate-spin" />
+                      <Loader2 className="h-8 w-8 animate-spin" />
                     </div>
                   ) : (
                     <BlogPostTable
                       posts={posts}
                       onEdit={openEditorForEdit}
-                      onDelete={handleDeletePost}
+                      onDelete={initiateDelete}
+                      isSubmitting={isSubmitting}
                     />
                   )}
                 </ScrollArea>
@@ -292,125 +422,34 @@ export default function BlogPostDisplay() {
           )}
         </main>
       </div>
-    </div>
-  );
-}
-
-interface FullScreenEditorProps {
-  currentPost: BlogPost | null;
-  content: Content;
-  setContent: (content: Content) => void;
-  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
-  onCancel: () => void;
-  register: any;
-  errors: any;
-  control: any;
-}
-
-function FullScreenEditor({
-  currentPost,
-  content,
-  setContent,
-  onSubmit,
-  onCancel,
-  register,
-  errors,
-  control,
-}: FullScreenEditorProps) {
-  return (
-    <div className="fixed inset-0 z-50 bg-background">
-      <div className="flex h-full flex-col">
-        <header className="flex items-center justify-between border-b p-4">
-          <h2 className="text-2xl font-bold">
-            {currentPost ? "Edit Post" : "New Post"}
-          </h2>
-          <Button variant="ghost" size="icon" onClick={onCancel}>
-            <X className="h-6 w-6" />
-          </Button>
-        </header>
-        <form
-          onSubmit={onSubmit}
-          className="flex flex-1 flex-col overflow-hidden"
-        >
-          <div className="flex-1 overflow-auto p-4">
-            <div className="mb-4 flex space-x-4">
-              <div className="flex-1">
-                <Controller
-                  name="title"
-                  control={control}
-                  rules={{ required: "Title is required" }}
-                  render={({ field }) => (
-                    <Input
-                      placeholder="Title"
-                      className="text-2xl"
-                      {...field}
-                    />
-                  )}
-                />
-                {errors.title && (
-                  <p className="mt-1 text-sm text-red-500">
-                    {errors.title.message}
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="mb-4 sm:flex sm:space-x-4">
-              <div className="sm:w-32 mb-4">
-                <Input placeholder="Label (e.g., New)" {...register("label")} />
-              </div>
-              <div className="mb-4">
-                <Input
-                  placeholder="Author"
-                  {...register("author", { required: "Author is required" })}
-                />
-                {errors.author && (
-                  <p className="mt-1 text-sm text-red-500">
-                    {errors.author.message}
-                  </p>
-                )}
-              </div>
-              <div className="mb-4 flex-1">
-                <Controller
-                  name="slug"
-                  control={control}
-                  rules={{
-                    required: "Slug is required",
-                    pattern: {
-                      value: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-                      message:
-                        "Slug must be lowercase, numbers, and hyphens only",
-                    },
-                  }}
-                  render={({ field }) => (
-                    <Input placeholder="Slug" {...field} />
-                  )}
-                />
-                {errors.slug && (
-                  <p className="mt-1 text-sm text-red-500">
-                    {errors.slug.message}
-                  </p>
-                )}
-              </div>
-            </div>
-            <MinimalTiptapEditor
-              value={content}
-              onChange={setContent}
-              className="min-h-[500px] border rounded-md"
-              editorContentClassName="p-5"
-              output="html"
-              placeholder="Type your content here..."
-              autofocus={true}
-              editable={true}
-              editorClassName="focus:outline-none prose max-w-full"
-            />
-          </div>
-          <div className="border-t p-4">
-            <Button type="submit" className="w-full">
-              {currentPost ? "Update Post" : "Add Post"}
-            </Button>
-          </div>
-        </form>
-      </div>
+      <AlertDialog
+        open={deleteConfirmation.isOpen}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) handleDeleteCancelled();
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the
+              blog post.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmitting}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirmed}
+              disabled={isSubmitting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
