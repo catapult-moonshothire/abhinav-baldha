@@ -75,8 +75,8 @@ export default async function BlogPostPage({
 
   return (
     <MainContainer>
-      <main className="prose mx-auto flex-1 w-full max-w-3xl fobol p-4 sm:p-8 relative z-10">
-        <header className="mt-8 mb-6">
+      <main className="prose mx-auto flex-1 w-full max-w-3xl fobol py-4 sm:p-8 relative z-10">
+        <header className="my-8">
           {new Date(blogPost?.created_at).toLocaleDateString("en-US", {
             year: "numeric",
             month: "short",
