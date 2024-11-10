@@ -84,9 +84,7 @@ export default async function BlogPostPage({
           })}{" "}
           by <Link href="/">Abhinav Baldha</Link>
         </header>
-        <h1 className="text-3xl sm:text-4xl font-extrabold">
-          {blogPost.title}
-        </h1>
+        <h1 className="text-4xl font-extrabold">{blogPost.title}</h1>
         <div
           className="mt-4 "
           dangerouslySetInnerHTML={{ __html: blogPost.content }}
