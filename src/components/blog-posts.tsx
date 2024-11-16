@@ -13,6 +13,7 @@ interface BlogPost {
   created_at: string;
   updated_at?: string;
   slug: string;
+  is_draft: boolean;
 }
 
 export const metadata: Metadata = {
@@ -24,6 +25,7 @@ export default async function BlogListPage() {
   const { data, error } = await supabase
     .from("blog_posts")
     .select("*")
+    .eq("is_draft", false) // Only fetch posts where is_draft is false
     .order("created_at", { ascending: false });
 
   if (error) {

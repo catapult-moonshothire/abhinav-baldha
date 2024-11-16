@@ -15,79 +15,24 @@ import { Spinner } from "../../../components/ui/spinner";
 import BlogPostDisplay from "@/components/blog-post-display";
 import MainContainer from "@/components/layout/main-container";
 import Link from "next/link";
+import { useAuth } from "@/components/providers/auth-context";
 
 export default function Admin() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { isAuthenticated, login, logout, error } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      const response = await fetch("/api/check-auth");
-      if (response.ok) {
-        setIsAuthenticated(true);
-        fetchPosts();
-      }
-    };
-    checkAuth();
-  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
     setLoading(true);
-
-    try {
-      const response = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
-
-      if (response.ok) {
-        setIsAuthenticated(true);
-        fetchPosts();
-      } else {
-        setError("Invalid credentials");
-      }
-    } catch (err) {
-      setError(`An error occurred. Please try again.,${err}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-  const handleLogout = async () => {
-    try {
-      const response = await fetch("/api/logout", { method: "POST" });
-      if (response.ok) {
-        setIsAuthenticated(false);
-      } else {
-        setError("Failed to logout. Please try again.");
-      }
-    } catch (err) {
-      setError(`An error occurred. Please try again.,${err}`);
-    }
-  };
-
-  const fetchPosts = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch("/api/blogs");
-      if (!response.ok) {
-        setError("Failed to fetch candidate data");
-      }
-    } catch (err) {
-      setError(`An error occurred while fetching candidate data. ${err}`);
-    } finally {
-      setLoading(false);
-    }
+    await login(username, password);
+    setLoading(false);
   };
 
   if (!isAuthenticated) {
     return (
-      <div className="flex h-[calc(100vh-248px)] mt-12 items-center justify-center">
+      <div className="flex h-[calc(100vh-248px)] pt-12 items-center justify-center">
         <Card className="mt-16 w-96">
           <CardHeader>
             <CardTitle>Login</CardTitle>
@@ -143,14 +88,14 @@ export default function Admin() {
       <Head>
         <meta name="robots" content="noindex" />
       </Head>
-      <MainContainer className="pt-8" large={true}>
+      <MainContainer className="" large={true}>
         <div className="">
-          <div className="flex items-center px-4 gap-2 justify-end">
+          {/* <div className="flex items-center px-4 gap-2 justify-end">
             <Link href="/">
               <Button variant={"secondary"}>Home</Button>
             </Link>
-            <Button onClick={handleLogout}>Logout</Button>
-          </div>
+            <Button onClick={logout}>Logout</Button>
+          </div> */}
           {loading ? (
             <Spinner />
           ) : error ? (

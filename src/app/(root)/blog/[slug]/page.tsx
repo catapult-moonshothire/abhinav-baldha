@@ -10,9 +10,10 @@ interface BlogPost {
   content_preview: string;
   created_at: string;
   slug: string;
+  tags: string; // Add the tags field to the BlogPost interface
 }
 
-export const revalidate = 3600 * 2; // Revalidate every hour
+export const revalidate = 3600 * 2; // Revalidate every 2 hours
 
 export async function generateStaticParams() {
   const { data, error } = await supabase.from("blog_posts").select("slug");
@@ -43,8 +44,8 @@ export async function generateMetadata({
   }
 
   return {
-    title: `${blogPost?.title} - My Blog`,
-    description: blogPost?.content_preview,
+    title: `${blogPost?.meta_title}`,
+    description: blogPost?.meta_description,
   };
 }
 
@@ -73,6 +74,11 @@ export default async function BlogPostPage({
 
   const blogPost = data as BlogPost;
 
+  // // Split the tags string into an array
+  // const tags = blogPost.tags
+  //   ? blogPost.tags.split(",").map((tag) => tag.trim())
+  //   : [];
+
   return (
     <MainContainer>
       <main className="prose mx-auto flex-1 w-full max-w-3xl fobol py-4 sm:p-8 relative z-10">
@@ -86,9 +92,28 @@ export default async function BlogPostPage({
         </header>
         <h1 className="text-4xl font-extrabold">{blogPost.title}</h1>
         <div
-          className="mt-4 "
+          className="mt-4"
           dangerouslySetInnerHTML={{ __html: blogPost.content }}
         />
+
+        {/* Display tags at the end */}
+        {/* {tags.length > 0 && (
+          <footer className="mt-8">
+            <h2 className="text-2xl font-semibold">Tags:</h2>
+            <ul className="flex flex-wrap gap-2 mt-2">
+              {tags.map((tag, index) => (
+                <li key={index}>
+                  <Link
+                    href={`/tags/${tag}`}
+                    className=""
+                  >
+                    {tag}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </footer>
+        )} */}
       </main>
     </MainContainer>
   );
