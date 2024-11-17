@@ -32,12 +32,12 @@ export default function Admin() {
 
   if (!isAuthenticated) {
     return (
-      <div className="flex h-[calc(100vh-248px)] pt-12 items-center justify-center">
+      <div className="flex h-[calc(100vh-248px)] mt-20 items-center justify-center">
         <Card className="mt-16 w-96">
           <CardHeader>
             <CardTitle>Login</CardTitle>
             <CardDescription>
-              Enter your credentials to access the candidate data.
+              Enter your credentials to access the page.
             </CardDescription>
           </CardHeader>
           <CardContent>

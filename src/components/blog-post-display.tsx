@@ -621,7 +621,9 @@ export default function BlogPostDisplay() {
                 key={item.id}
                 variant={activeTab === item.id ? "default" : "ghost"}
                 className="w-full justify-start"
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => {
+                  return setActiveTab(item.id), setIsSidebarOpen(false);
+                }}
               >
                 <item.icon className="mr-2 h-4 w-4" />
                 {item.name}
@@ -683,7 +685,7 @@ export default function BlogPostDisplay() {
             </Button>
           </div>
         </header>
-        <main className="flex-1 overflow-auto p-8">
+        <main className="flex-1 overflow-auto py-4 sm:p-8">
           {isEditing ? (
             <FullScreenEditor
               currentPost={currentPost}

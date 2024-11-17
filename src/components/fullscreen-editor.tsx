@@ -70,8 +70,8 @@ export default function FullScreenEditor({
             </Button>
           </div>
         </header>
-        <form className="flex flex-1 overflow-hidden">
-          <div className="flex-1 overflow-auto p-4">
+        <form className="flex flex-1 max-sm:flex-col overflow-hidden">
+          <div className="flex-1 max-sm:w-full sm:overflow-auto p-4">
             <div className="mb-4">
               <Controller
                 name="title"
@@ -80,7 +80,7 @@ export default function FullScreenEditor({
                 render={({ field }) => (
                   <Input
                     placeholder="Post Title"
-                    className="text-4xl font-bold border-0 px-0 focus-visible:ring-0"
+                    className="text-2xl  font-bold border-0 px-0 focus-visible:ring-0"
                     disabled={isSubmitting}
                     {...field}
                   />
@@ -95,7 +95,7 @@ export default function FullScreenEditor({
             <MinimalTiptapEditor
               value={content}
               onChange={setContent}
-              className="min-h-[500px]"
+              className="sm:min-h-[500px]"
               editorContentClassName="prose max-w-none"
               output="html"
               placeholder="Start writing your post..."
@@ -103,7 +103,7 @@ export default function FullScreenEditor({
               editable={!isSubmitting}
             />
           </div>
-          <div className="w-80 border-l overflow-y-auto">
+          <div className="sm:w-80 border-l overflow-y-auto">
             <div className="p-4 space-y-6">
               <div>
                 <h3 className="text-lg font-semibold mb-4">Post Settings</h3>

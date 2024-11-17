@@ -20,7 +20,10 @@ import { formatDate } from "@/lib/helper";
 const BlogPostDetailsDialog = ({ post }: { post: BlogPost }) => (
   <Dialog>
     <DialogTrigger asChild>
-      <Button variant="link" className="p-0">
+      <Button
+        variant="link"
+        className="p-0 max-sm:max-w-40 text-left text-wrap"
+      >
         {post.title}
       </Button>
     </DialogTrigger>
