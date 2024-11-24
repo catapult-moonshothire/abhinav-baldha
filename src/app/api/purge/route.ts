@@ -1,15 +1,22 @@
-// api/purge/route.ts
-
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
-    // Revalidate the blog list page
-    revalidatePath("/");
+    const { searchParams } = new URL(request.url);
+    const path = searchParams.get("path");
+    const tag = searchParams.get("tag");
 
-    // Revalidate all blog post pages
-    revalidatePath("/blog/[slug]");
+    if (path) {
+      revalidatePath(path);
+    } else if (tag) {
+      revalidateTag(tag);
+    } else {
+      // Revalidate the blog list page
+      revalidatePath("/");
+      // Revalidate all blog post pages
+      revalidateTag("blog-posts");
+    }
 
     return NextResponse.json({ revalidated: true, now: Date.now() });
   } catch (err) {

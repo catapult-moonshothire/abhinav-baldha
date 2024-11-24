@@ -45,9 +45,13 @@ import { Badge } from "./ui/badge";
 
 type TabType = "dashboard" | "posts" | "drafts" | "settings";
 
-async function triggerPurge() {
+async function triggerPurge(path?: string, tag?: string) {
   try {
-    const response = await fetch("/api/purge", {
+    const url = new URL("/api/purge", window.location.origin);
+    if (path) url.searchParams.append("path", path);
+    if (tag) url.searchParams.append("tag", tag);
+
+    const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -218,7 +222,12 @@ export default function BlogPostDisplay() {
 
       if (error) throw error;
 
-      const purgeSuccess = await triggerPurge();
+      const purgeSuccess = await triggerPurge(
+        `/blog/${data.slug}`,
+        "blog-posts"
+      );
+
+      await triggerPurge("/", "blog-posts");
 
       toast({
         title: "Success",
@@ -279,7 +288,12 @@ export default function BlogPostDisplay() {
 
       if (error) throw error;
 
-      const purgeSuccess = await triggerPurge();
+      const purgeSuccess = await triggerPurge(
+        `/blog/${updatedData.slug}`,
+        "blog-posts"
+      );
+
+      await triggerPurge("/", "blog-posts");
 
       toast({
         title: "Success",
@@ -319,8 +333,12 @@ export default function BlogPostDisplay() {
 
       if (error) throw error;
 
-      const purgeSuccess = await triggerPurge();
+      const purgeSuccess = await triggerPurge(
+        `/blog/${post.slug}`,
+        "blog-posts"
+      );
 
+      await triggerPurge("/", "blog-posts");
       toast({
         title: "Success",
         description: `Post published successfully${
@@ -408,8 +426,12 @@ export default function BlogPostDisplay() {
 
       if (error) throw error;
 
-      const purgeSuccess = await triggerPurge();
+      const purgeSuccess = await triggerPurge(
+        `/blog/${deleteConfirmation.slug}`,
+        "blog-posts"
+      );
 
+      await triggerPurge("/", "blog-posts");
       toast({
         title: "Success",
         description:
@@ -440,7 +462,7 @@ export default function BlogPostDisplay() {
   const renderPostItem = (post: BlogPost, isDraft: boolean = false) => (
     <div
       key={post.id}
-      className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0"
+      className="flex items-center justify-between border-b pb-4 md:pr-6 last:border-0 last:pb-0"
     >
       <div>
         {/* <BlogPostDetailsDialog post={post} /> */}

@@ -98,3 +98,6 @@ export default async function BlogPostPage({
     </MainContainer>
   );
 }
+
+// Add this line at the end of the file
+export const dynamic = "force-dynamic";
