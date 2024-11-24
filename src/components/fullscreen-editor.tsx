@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FullScreenEditorProps } from "@/lib/types";
+import Link from "next/link";
 
 export default function FullScreenEditor({
   currentPost,
@@ -37,13 +38,15 @@ export default function FullScreenEditor({
             {currentPost ? "Edit Post" : "New Post"}
           </h2>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={onSaveDraft}
-              disabled={isSubmitting}
-            >
-              Save as Draft
-            </Button>
+            {(!currentPost || currentPost.is_draft) && (
+              <Button
+                variant="outline"
+                onClick={onSaveDraft}
+                disabled={isSubmitting}
+              >
+                Save as Draft
+              </Button>
+            )}
             <Button
               type="submit"
               onClick={onSubmit}
@@ -52,10 +55,14 @@ export default function FullScreenEditor({
               {isSubmitting ? (
                 <>
                   <Loader className="mr-2 h-4 w-4 animate-spin" />
-                  {currentPost ? "Updating..." : "Publishing..."}
+                  {currentPost ? "Updating..." : "Submitting..."}
                 </>
               ) : currentPost ? (
-                "Update Post"
+                currentPost.is_draft ? (
+                  "Publish"
+                ) : (
+                  "Update Post"
+                )
               ) : (
                 "Publish"
               )}
@@ -80,7 +87,7 @@ export default function FullScreenEditor({
                 render={({ field }) => (
                   <Input
                     placeholder="Post Title"
-                    className="text-2xl  font-bold border-0 px-0 focus-visible:ring-0"
+                    className="text-xl md:text-3xl font-semibold md:h-16 border-0 px-0 focus-visible:ring-0"
                     disabled={isSubmitting}
                     {...field}
                   />
@@ -129,12 +136,24 @@ export default function FullScreenEditor({
                         />
                       )}
                     />
+                    {currentPost && (
+                      <div className="mt-2 text-sm">
+                        <Link
+                          href={`/blog/${currentPost.slug}`}
+                          target="_blank"
+                          className="text-blue-500"
+                        >
+                          View Post
+                        </Link>
+                      </div>
+                    )}
                     {errors.slug && (
                       <p className="mt-1 text-sm text-destructive">
                         {errors.slug.message}
                       </p>
                     )}
                   </div>
+
                   <div className="mb-4 sm:flex sm:space-x-4">
                     <div className="mb-4 sm:w-32">
                       <Label htmlFor="slug">Label</Label>

@@ -16,6 +16,7 @@ import {
   Loader2,
   Check,
   Search,
+  LinkIcon,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -39,7 +40,6 @@ import FullScreenEditor from "./fullscreen-editor";
 import { handleError } from "@/lib/helper";
 import { useAuth } from "./providers/auth-context";
 import Link from "next/link";
-import BlogPostDetailsDialog from "./blog-post-details-dialog";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 
@@ -443,7 +443,19 @@ export default function BlogPostDisplay() {
       className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0"
     >
       <div>
-        <BlogPostDetailsDialog post={post} />
+        {/* <BlogPostDetailsDialog post={post} /> */}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="link"
+            onClick={() => openEditorForEdit(post)}
+            className="p-0 max-sm:max-w-40 text-left text-wrap"
+          >
+            {post.title}
+          </Button>
+          <Link target="_blank" href={`/blog/${post.slug}`}>
+            <LinkIcon size={14} />
+          </Link>
+        </div>
         <p className="text-sm text-muted-foreground">
           {isDraft ? "Last updated" : "Published"}{" "}
           {formatDistanceToNow(
@@ -469,11 +481,11 @@ export default function BlogPostDisplay() {
             onClick={() => handlePublishDraft(post)}
             disabled={isSubmitting}
           >
-            {isSubmitting ? (
+            {/* {isSubmitting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Check className="h-4 w-4 mr-2" />
-            )}
+            )} */}
             Publish
           </Button>
         )}
@@ -518,7 +530,7 @@ export default function BlogPostDisplay() {
         </Card>
       </div>
 
-      <Card>
+      <Card className="h-full shadow-none border-none">
         <CardHeader>
           <CardTitle>Recent Posts</CardTitle>
         </CardHeader>
@@ -540,7 +552,7 @@ export default function BlogPostDisplay() {
       case "posts":
       case "drafts":
         return (
-          <Card className="h-full">
+          <Card className="h-full shadow-none border-none">
             <CardHeader>
               <CardTitle>
                 {activeTab === "posts" ? "Published Posts" : "Draft Posts"}
@@ -578,7 +590,7 @@ export default function BlogPostDisplay() {
         );
       case "settings":
         return (
-          <Card className="h-full">
+          <Card className="h-full shadow-none border-none">
             <CardHeader>
               <CardTitle>Settings</CardTitle>
             </CardHeader>
