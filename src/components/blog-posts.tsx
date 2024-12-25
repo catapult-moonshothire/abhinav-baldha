@@ -48,29 +48,31 @@ export default async function BlogListPage() {
         {blogPosts.length === 0 ? (
           <Spinner />
         ) : (
-          blogPosts.map((post) => (
-            <div key={post.id}>
-              <h2 className="flex -mt-1 items-center text-lg sm:text-xl">
-                <Link
-                  href={`/blog/${post.slug}`}
-                  className="mt-0.5 font-semibold"
-                >
-                  {post.title}
-                </Link>
-                {post?.label === "new" && isNewPost(post.created_at) && (
-                  <span className="inline-flex items-center rounded-full bg-[#ff6b6b] px-1.5 py-0.5 text-xs font-medium text-white uppercase ml-3 mt-0.5">
-                    New
+          blogPosts
+            .filter((blog) => blog.is_draft === false)
+            .map((post) => (
+              <div key={post.id}>
+                <h2 className="flex -mt-1 items-center text-lg sm:text-xl">
+                  <Link
+                    href={`/blog/${post.slug}`}
+                    className="mt-0.5 font-semibold"
+                  >
+                    {post.title}
+                  </Link>
+                  {post?.label === "new" && isNewPost(post.created_at) && (
+                    <span className="inline-flex items-center rounded-full bg-[#ff6b6b] px-1.5 py-0.5 text-xs font-medium text-white uppercase ml-3 mt-0.5">
+                      New
+                    </span>
+                  )}
+                  <span className="ml-3 text-sm text-primary/50 font-normal">
+                    {new Date(post.created_at).toLocaleDateString("en-US", {
+                      month: "2-digit",
+                      year: "numeric",
+                    })}
                   </span>
-                )}
-                <span className="ml-3 text-sm text-primary/50 font-normal">
-                  {new Date(post.created_at).toLocaleDateString("en-US", {
-                    month: "2-digit",
-                    year: "numeric",
-                  })}
-                </span>
-              </h2>
-            </div>
-          ))
+                </h2>
+              </div>
+            ))
         )}
       </main>
     </>

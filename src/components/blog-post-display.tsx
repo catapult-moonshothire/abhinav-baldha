@@ -474,9 +474,11 @@ export default function BlogPostDisplay() {
           >
             {post.title}
           </Button>
-          <Link target="_blank" href={`/blog/${post.slug}`}>
-            <LinkIcon size={14} />
-          </Link>
+          {!isDraft && (
+            <Link target="_blank" href={`/blog/${post.slug}`}>
+              <LinkIcon size={14} />
+            </Link>
+          )}
         </div>
         <p className="text-sm text-muted-foreground">
           {isDraft ? "Last updated" : "Published"}{" "}
