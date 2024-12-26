@@ -213,14 +213,14 @@ export default function FullScreenEditor({
                       )}
                     />
                   </div>
-                  <div>
+                  {/* <div>
                     <Label htmlFor="tags">Tags</Label>
                     <Input
                       id="tags"
                       placeholder="Add tags separated by commas"
                       {...register("tags")}
                     />
-                  </div>
+                  </div> */}
                 </div>
               </div>
               <div>

@@ -1,15 +1,17 @@
+// blog/[slug]/page.tsx
+
 import MainContainer from "@/components/layout/main-container";
-import prisma from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 interface BlogPost {
-  id: number;
+  id: string;
   title: string;
   content: string;
   content_preview: string;
-  created_at: Date;
+  created_at: string;
   slug: string;
   // tags: string;
   is_draft: boolean;
@@ -20,12 +22,17 @@ interface BlogPost {
 export const revalidate = 3600 * 2; // Revalidate every 2 hours
 
 export async function generateStaticParams() {
-  const posts = await prisma.blogPost.findMany({
-    where: { is_draft: false },
-    select: { slug: true },
-  });
+  const { data, error } = await supabase
+    .from("blog_posts")
+    .select("slug")
+    .eq("is_draft", false);
 
-  return posts.map((post) => ({ slug: post.slug }));
+  if (error) {
+    console.error("Error fetching blog post slugs:", error);
+    return [];
+  }
+
+  return data?.map((post) => ({ slug: post.slug })) || [];
 }
 
 export async function generateMetadata({
@@ -33,9 +40,11 @@ export async function generateMetadata({
 }: {
   params: { slug: string };
 }): Promise<Metadata> {
-  const blogPost = await prisma.blogPost.findUnique({
-    where: { slug: params.slug },
-  });
+  const { data: blogPost } = await supabase
+    .from("blog_posts")
+    .select("*")
+    .eq("slug", params.slug)
+    .single();
 
   if (!blogPost || blogPost.is_draft) {
     return {
@@ -54,11 +63,20 @@ export default async function BlogPostPage({
 }: {
   params: { slug: string };
 }) {
-  const blogPost = await prisma.blogPost.findUnique({
-    where: { slug: params.slug },
-  });
+  const { data, error } = await supabase
+    .from("blog_posts")
+    .select("*")
+    .eq("slug", params.slug)
+    .single();
 
-  if (!blogPost || blogPost.is_draft) {
+  if (error) {
+    console.error("Error fetching blog post:", error);
+    notFound();
+  }
+
+  const blogPost = data as BlogPost;
+
+  if (blogPost.is_draft) {
     notFound();
   }
 
@@ -66,7 +84,7 @@ export default async function BlogPostPage({
     <MainContainer>
       <main className="prose mx-auto flex-1 w-full max-w-3xl fobol py-4 sm:p-8 relative z-10">
         <header className="my-8">
-          {blogPost.created_at.toLocaleDateString("en-US", {
+          {new Date(blogPost.created_at).toLocaleDateString("en-US", {
             year: "numeric",
             month: "short",
             day: "numeric",
@@ -83,4 +101,5 @@ export default async function BlogPostPage({
   );
 }
 
+// Add this line at the end of the file
 export const dynamic = "force-dynamic";

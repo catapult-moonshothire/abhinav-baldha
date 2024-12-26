@@ -19,7 +19,7 @@ import {
   FileHandler,
 } from "../extensions";
 import { cn } from "@/lib/utils";
-import { getOutput, randomId } from "../utils";
+import { fileToBase64, getOutput, randomId } from "../utils";
 import { useThrottle } from "../hooks/use-throttle";
 import { toast } from "sonner";
 
@@ -50,34 +50,22 @@ const createExtensions = (placeholder: string) => [
   Image.configure({
     allowedMimeTypes: ["image/*"],
     maxFileSize: 5 * 1024 * 1024,
+    allowBase64: true,
     uploadFn: async (file) => {
-      try {
-        const formData = new FormData();
-        formData.append("file", file);
+      // NOTE: This is a fake upload function. Replace this with your own upload logic.
+      // This function should return the uploaded image URL.
 
-        const filename = `${randomId()}-${file.name}`;
-        const response = await fetch(
-          `/api/upload-image?filename=${encodeURIComponent(filename)}`,
-          {
-            method: "POST",
-            body: file,
-          }
-        );
+      // wait 3s to simulate upload
+      await new Promise((resolve) => setTimeout(resolve, 3000));
 
-        if (!response.ok) {
-          throw new Error("Failed to upload image");
-        }
+      const src = await fileToBase64(file);
 
-        const data = await response.json();
-        return { id: data.url, src: data.url };
-      } catch (error) {
-        console.error("Error uploading image:", error);
-        throw error;
-      }
+      // either return { id: string | number, src: string } or just src
+      // return src;
+      return { id: randomId(), src };
     },
     onImageRemoved({ id, src }) {
       console.log("Image removed", { id, src });
-      // You can implement image deletion from Vercel Blob here if needed
     },
     onValidationError(errors) {
       errors.forEach((error) => {
@@ -111,87 +99,26 @@ const createExtensions = (placeholder: string) => [
     },
   }),
   FileHandler.configure({
+    allowBase64: true,
     allowedMimeTypes: ["image/*"],
     maxFileSize: 5 * 1024 * 1024,
-    onDrop: async (editor, files, pos) => {
-      for (const file of files) {
-        try {
-          const formData = new FormData();
-          formData.append("file", file);
-
-          const filename = `${randomId()}-${file.name}`;
-          const response = await fetch(
-            `/api/upload-image?filename=${encodeURIComponent(filename)}`,
-            {
-              method: "POST",
-              body: file,
-            }
-          );
-
-          if (!response.ok) {
-            throw new Error("Failed to upload image");
-          }
-
-          const data = await response.json();
-          editor.commands.insertContentAt(pos, {
-            type: "image",
-            attrs: { src: data.url },
-          });
-        } catch (error) {
-          if (error instanceof Error) {
-            console.error("Error uploading image:", error);
-            toast.error("Failed to upload image", {
-              position: "bottom-right",
-              description: error.message,
-            });
-          } else {
-            console.error("Unknown error uploading image:", error);
-            toast.error("An unknown error occurred while uploading the image", {
-              position: "bottom-right",
-            });
-          }
-        }
-      }
+    onDrop: (editor, files, pos) => {
+      files.forEach(async (file) => {
+        const src = await fileToBase64(file);
+        editor.commands.insertContentAt(pos, {
+          type: "image",
+          attrs: { src },
+        });
+      });
     },
-    onPaste: async (editor, files) => {
-      for (const file of files) {
-        try {
-          const formData = new FormData();
-          formData.append("file", file);
-
-          const filename = `${randomId()}-${file.name}`;
-          const response = await fetch(
-            `/api/upload-image?filename=${encodeURIComponent(filename)}`,
-            {
-              method: "POST",
-              body: file,
-            }
-          );
-
-          if (!response.ok) {
-            throw new Error("Failed to upload image");
-          }
-
-          const data = await response.json();
-          editor.commands.insertContent({
-            type: "image",
-            attrs: { src: data.url },
-          });
-        } catch (error) {
-          if (error instanceof Error) {
-            console.error("Error uploading image:", error);
-            toast.error("Failed to upload image", {
-              position: "bottom-right",
-              description: error.message,
-            });
-          } else {
-            console.error("Unknown error uploading image:", error);
-            toast.error("An unknown error occurred while uploading the image", {
-              position: "bottom-right",
-            });
-          }
-        }
-      }
+    onPaste: (editor, files) => {
+      files.forEach(async (file) => {
+        const src = await fileToBase64(file);
+        editor.commands.insertContent({
+          type: "image",
+          attrs: { src },
+        });
+      });
     },
     onValidationError: (errors) => {
       errors.forEach((error) => {

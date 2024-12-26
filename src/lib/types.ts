@@ -8,7 +8,7 @@ export interface BlogPost {
   content_preview?: string; // Optional preview of the content
   author: string; // Author's name or ID
   category?: string; // Category of the blog post (optional)
-  tags: string[]; // Array of tags associated with the post
+  // tags: string[]; // Array of tags associated with the post
   meta_title?: string; // Optional SEO title for the post
   meta_description?: string; // Optional SEO description for the post
   views: number; // Number of views for the post

@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { supabase } from "@/lib/supabase";
 import { useForm } from "react-hook-form";
 import { BlogPost } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
@@ -123,6 +122,7 @@ export default function BlogPostDisplay() {
     const draftsCount = posts.filter((post) => post.is_draft).length;
     setStats({ published: publishedCount, drafts: draftsCount });
   };
+
   const {
     register,
     handleSubmit,
@@ -140,23 +140,6 @@ export default function BlogPostDisplay() {
 
   useEffect(() => {
     fetchPosts();
-
-    // Set up real-time subscription
-    const subscription = supabase
-      .channel("blog_posts")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "blog_posts" },
-        (payload) => {
-          console.log("Change received!", payload);
-          fetchPosts();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      subscription.unsubscribe();
-    };
   }, []);
 
   useEffect(() => {
@@ -172,13 +155,12 @@ export default function BlogPostDisplay() {
   const fetchPosts = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("blog_posts")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setPosts(data || []);
+      const response = await fetch("/api/posts");
+      if (!response.ok) {
+        throw new Error("Failed to fetch posts");
+      }
+      const data = await response.json();
+      setPosts(data);
     } catch (error) {
       handleError(error, toast);
     } finally {
@@ -190,37 +172,24 @@ export default function BlogPostDisplay() {
     try {
       setIsSubmitting(true);
 
-      // Check if slug is unique
-      const { data: existingPost, error: checkError } = await supabase
-        .from("blog_posts")
-        .select("slug")
-        .eq("slug", data.slug)
-        .single();
+      const response = await fetch("/api/posts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...data,
+          content: content,
+          content_preview: content?.toString().slice(0, 200),
+          is_draft: isDraft,
+        }),
+      });
 
-      if (checkError && checkError.code !== "PGRST116") throw checkError;
-      if (existingPost) {
-        setError("slug", {
-          type: "manual",
-          message: "This slug is already in use",
-        });
-        return;
+      if (!response.ok) {
+        throw new Error("Failed to create post");
       }
 
-      const { data: newPost, error } = await supabase
-        .from("blog_posts")
-        .insert([
-          {
-            ...data,
-            content: content,
-            content_preview: content?.toString().slice(0, 200),
-            views: 0,
-            updated_at: new Date().toISOString(),
-            is_draft: isDraft,
-          },
-        ])
-        .single();
-
-      if (error) throw error;
+      const newPost = await response.json();
 
       const purgeSuccess = await triggerPurge(
         `/blog/${data.slug}`,
@@ -257,36 +226,22 @@ export default function BlogPostDisplay() {
     try {
       setIsSubmitting(true);
 
-      // Check if slug is unique (excluding the current post)
-      if (updatedData.slug !== currentPost.slug) {
-        const { data: existingPost, error: checkError } = await supabase
-          .from("blog_posts")
-          .select("slug")
-          .eq("slug", updatedData.slug)
-          .single();
-
-        if (checkError && checkError.code !== "PGRST116") throw checkError;
-        if (existingPost) {
-          setError("slug", {
-            type: "manual",
-            message: "This slug is already in use",
-          });
-          return;
-        }
-      }
-
-      const { error } = await supabase
-        .from("blog_posts")
-        .update({
+      const response = await fetch(`/api/posts/${currentPost.slug}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           ...updatedData,
           content: content,
           content_preview: content?.toString().slice(0, 200),
-          updated_at: new Date().toISOString(),
           is_draft: isDraft,
-        })
-        .eq("slug", currentPost.slug);
+        }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error("Failed to update post");
+      }
 
       const purgeSuccess = await triggerPurge(
         `/blog/${updatedData.slug}`,
@@ -326,12 +281,20 @@ export default function BlogPostDisplay() {
   const handlePublishDraft = async (post: BlogPost) => {
     try {
       setIsSubmitting(true);
-      const { error } = await supabase
-        .from("blog_posts")
-        .update({ is_draft: false, updated_at: new Date().toISOString() })
-        .eq("id", post.id);
+      const response = await fetch(`/api/posts/${post.slug}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...post,
+          is_draft: false,
+        }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error("Failed to publish draft");
+      }
 
       const purgeSuccess = await triggerPurge(
         `/blog/${post.slug}`,
@@ -359,12 +322,13 @@ export default function BlogPostDisplay() {
     try {
       setIsSubmitting(true);
 
-      const { error } = await supabase
-        .from("blog_posts")
-        .delete()
-        .eq("slug", slug);
+      const response = await fetch(`/api/posts/${slug}`, {
+        method: "DELETE",
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error("Failed to delete post");
+      }
 
       const purgeSuccess = await triggerPurge();
 
@@ -419,12 +383,13 @@ export default function BlogPostDisplay() {
     try {
       setIsSubmitting(true);
 
-      const { error } = await supabase
-        .from("blog_posts")
-        .delete()
-        .eq("slug", deleteConfirmation.slug);
+      const response = await fetch(`/api/posts/${deleteConfirmation.slug}`, {
+        method: "DELETE",
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error("Failed to delete post");
+      }
 
       const purgeSuccess = await triggerPurge(
         `/blog/${deleteConfirmation.slug}`,
