@@ -1,6 +1,6 @@
 -- CreateTable
 CREATE TABLE "BlogPost" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "id" SERIAL NOT NULL,
     "title" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "description" TEXT,
@@ -12,15 +12,17 @@ CREATE TABLE "BlogPost" (
     "meta_description" TEXT,
     "views" INTEGER NOT NULL DEFAULT 0,
     "is_draft" BOOLEAN NOT NULL DEFAULT false,
-    "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" DATETIME,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3),
     "label" TEXT,
-    "published_at" DATETIME,
+    "published_at" TIMESTAMP(3),
     "author_bio" TEXT,
     "reading_time" INTEGER,
     "featured_image_url" TEXT,
     "status" TEXT,
-    "images" TEXT
+    "images" TEXT,
+
+    CONSTRAINT "BlogPost_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
