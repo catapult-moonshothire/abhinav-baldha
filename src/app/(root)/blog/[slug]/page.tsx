@@ -1,5 +1,5 @@
 import MainContainer from "@/components/layout/main-container";
-import prisma from "@/lib/db";
+import db from "@/lib/db";
 import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -9,10 +9,9 @@ interface BlogPost {
   title: string;
   content: string;
   content_preview: string;
-  created_at: Date;
+  created_at: string;
   slug: string;
-  // tags: string;
-  is_draft: boolean;
+  is_draft: number;
   meta_title: string;
   meta_description: string;
 }
@@ -20,12 +19,10 @@ interface BlogPost {
 export const revalidate = 3600 * 2; // Revalidate every 2 hours
 
 export async function generateStaticParams() {
-  const posts = await prisma.blogPost.findMany({
-    where: { is_draft: false },
-    select: { slug: true },
-  });
-
-  return posts.map((post) => ({ slug: post.slug }));
+  const posts = await db.query(
+    "SELECT slug FROM blog_posts WHERE is_draft = 0"
+  );
+  return posts.map((post: { slug: string }) => ({ slug: post.slug }));
 }
 
 export async function generateMetadata({
@@ -33,11 +30,11 @@ export async function generateMetadata({
 }: {
   params: { slug: string };
 }): Promise<Metadata> {
-  const blogPost = await prisma.blogPost.findUnique({
-    where: { slug: params.slug },
-  });
+  const [blogPost] = await db.query("SELECT * FROM blog_posts WHERE slug = ?", [
+    params.slug,
+  ]);
 
-  if (!blogPost || blogPost.is_draft) {
+  if (!blogPost || blogPost.is_draft === 1) {
     return {
       title: "Blog Post Not Found",
     };
@@ -54,11 +51,11 @@ export default async function BlogPostPage({
 }: {
   params: { slug: string };
 }) {
-  const blogPost = await prisma.blogPost.findUnique({
-    where: { slug: params.slug },
-  });
+  const [blogPost] = await db.query("SELECT * FROM blog_posts WHERE slug = ?", [
+    params.slug,
+  ]);
 
-  if (!blogPost || blogPost.is_draft) {
+  if (!blogPost || blogPost.is_draft === 1) {
     notFound();
   }
 
@@ -66,7 +63,7 @@ export default async function BlogPostPage({
     <MainContainer>
       <main className="prose mx-auto flex-1 w-full max-w-3xl fobol py-4 sm:p-8 relative z-10">
         <header className="my-8">
-          {blogPost.created_at.toLocaleDateString("en-US", {
+          {new Date(blogPost.created_at).toLocaleDateString("en-US", {
             year: "numeric",
             month: "short",
             day: "numeric",

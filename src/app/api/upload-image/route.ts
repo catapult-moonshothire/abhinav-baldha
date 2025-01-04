@@ -1,7 +1,8 @@
-import { put } from "@vercel/blob";
-import { NextResponse } from "next/server";
+import { mkdir, writeFile } from "fs/promises";
+import { NextRequest, NextResponse } from "next/server";
+import path from "path";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   let filename = searchParams.get("filename");
 
@@ -12,28 +13,31 @@ export async function POST(request: Request) {
     );
   }
 
-  // Add the folder structure to the filename
-  filename = `images/${filename}`;
+  // Remove the extra 'images/' from the filename
+  filename = filename.replace(/^images\//, "");
 
   const file = await request.blob();
 
   try {
-    const blob = await put(filename, file, {
-      access: "public",
-    });
+    // Ensure the images directory exists
+    const imagesDir = path.join(process.cwd(), "public", "images");
+    await mkdir(imagesDir, { recursive: true });
 
-    // If you want to use a custom domain, you'll need to modify the URL here
-    const customUrl = new URL(blob.url);
-    customUrl.hostname = "abhinav-baldha.vercel.app";
+    // Save the file
+    await writeFile(
+      path.join(imagesDir, filename),
+      Buffer.from(await file.arrayBuffer())
+    );
+
+    const imageUrl = `/images/${filename}`;
 
     return NextResponse.json({
-      ...blob,
-      customUrl: customUrl.toString(),
+      url: imageUrl,
     });
   } catch (error) {
-    console.error("Error uploading to Vercel Blob:", error);
+    console.error("Error saving image:", error);
     return NextResponse.json(
-      { error: "Failed to upload image" },
+      { error: "Failed to save image" },
       { status: 500 }
     );
   }

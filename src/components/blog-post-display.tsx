@@ -1,70 +1,26 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import {
-  LayoutDashboard,
-  FileText,
-  FileEdit,
-  Settings,
-  Menu,
-  Plus,
-  RefreshCw,
-  Pencil,
-  Trash2,
-  Loader2,
-  Check,
-  Search,
-  LinkIcon,
-} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useForm } from "react-hook-form";
-import { BlogPost } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { Content } from "@tiptap/react";
-import { formatDistanceToNow } from "date-fns";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "./ui/alert-dialog";
-import FullScreenEditor from "./fullscreen-editor";
+import { navigation } from "@/lib/constants";
 import { handleError } from "@/lib/helper";
-import { useAuth } from "./providers/auth-context";
+import { BlogPost, TabType } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import { Content } from "@tiptap/react";
+import { Loader2, Menu, Plus, RefreshCw } from "lucide-react";
 import Link from "next/link";
-import { Input } from "./ui/input";
-import { Badge } from "./ui/badge";
-
-type TabType = "dashboard" | "posts" | "drafts" | "settings";
-
-async function triggerPurge(path?: string, tag?: string) {
-  try {
-    const url = new URL("/api/purge", window.location.origin);
-    if (path) url.searchParams.append("path", path);
-    if (tag) url.searchParams.append("tag", tag);
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to purge cache: ${response.statusText}`);
-    }
-    return true;
-  } catch (error) {
-    console.error("Error purging cache:", error);
-    return false;
-  }
-}
+import { useEffect, useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
+import triggerPurge from "../lib/trigger-purge";
+import BlogPostItem from "./blog-post-item";
+import BlogPostSearch from "./blog-post-search";
+import BlogPostStats from "./blog-post-stats";
+import DeleteConfirmationDialog from "./delete-confirmation";
+import FullScreenEditor from "./fullscreen-editor";
+import { ImportExportData } from "./import-export";
+import { useAuth } from "./providers/auth-context";
 
 export default function BlogPostDisplay() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -90,29 +46,6 @@ export default function BlogPostDisplay() {
   const [searchTerm, setSearchTerm] = useState("");
   const { isAuthenticated, logout } = useAuth();
 
-  const navigation = [
-    {
-      name: "Dashboard",
-      icon: LayoutDashboard,
-      id: "dashboard" as TabType,
-    },
-    {
-      name: "Posts",
-      icon: FileText,
-      id: "posts" as TabType,
-    },
-    {
-      name: "Drafts",
-      icon: FileEdit,
-      id: "drafts" as TabType,
-    },
-    {
-      name: "Settings",
-      icon: Settings,
-      id: "settings" as TabType,
-    },
-  ];
-
   useEffect(() => {
     fetchStats();
   }, [posts]);
@@ -127,7 +60,6 @@ export default function BlogPostDisplay() {
     register,
     handleSubmit,
     reset,
-    setError,
     control,
     watch,
     setValue,
@@ -318,36 +250,6 @@ export default function BlogPostDisplay() {
     }
   };
 
-  const handleDeletePost = async (slug: string) => {
-    try {
-      setIsSubmitting(true);
-
-      const response = await fetch(`/api/posts/${slug}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete post");
-      }
-
-      const purgeSuccess = await triggerPurge();
-
-      toast({
-        title: "Success",
-        description:
-          "Post deleted successfully" +
-          (!purgeSuccess ? " (cache purge failed)" : ""),
-        variant: purgeSuccess ? "default" : "destructive",
-      });
-
-      await fetchPosts();
-    } catch (error) {
-      handleError(error, toast);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const openEditorForEdit = (post: BlogPost) => {
     setCurrentPost(post);
     reset(post);
@@ -425,100 +327,18 @@ export default function BlogPostDisplay() {
   }, [posts, searchTerm]);
 
   const renderPostItem = (post: BlogPost, isDraft: boolean = false) => (
-    <div
-      key={post.id}
-      className="flex items-center justify-between border-b pb-4 md:pr-6 last:border-0 last:pb-0"
-    >
-      <div>
-        {/* <BlogPostDetailsDialog post={post} /> */}
-        <div className="flex items-center gap-2">
-          <Button
-            variant="link"
-            onClick={() => openEditorForEdit(post)}
-            className="p-0 max-sm:max-w-40 text-left text-wrap"
-          >
-            {post.title}
-          </Button>
-          {!isDraft && (
-            <Link target="_blank" href={`/blog/${post.slug}`}>
-              <LinkIcon size={14} />
-            </Link>
-          )}
-        </div>
-        <p className="text-sm text-muted-foreground">
-          {isDraft ? "Last updated" : "Published"}{" "}
-          {formatDistanceToNow(
-            new Date(
-              isDraft ? post.updated_at || post.created_at : post.created_at
-            ),
-            {
-              addSuffix: true,
-            }
-          )}
-        </p>
-      </div>
-      <div className="flex items-center gap-2">
-        {!isDraft && (
-          <Badge className="!py-1 h-8 !px-3" variant={"success"}>
-            Published
-          </Badge>
-        )}
-        {isDraft && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handlePublishDraft(post)}
-            disabled={isSubmitting}
-          >
-            {/* {isSubmitting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Check className="h-4 w-4 mr-2" />
-            )} */}
-            Publish
-          </Button>
-        )}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => openEditorForEdit(post)}
-        >
-          <Pencil className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => initiateDelete(post.slug)}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
+    <BlogPostItem
+      post={post}
+      isDraft={isDraft}
+      onEdit={() => openEditorForEdit(post)}
+      onDelete={() => initiateDelete(post.slug)}
+      onPublish={() => handlePublishDraft(post)}
+    />
   );
 
   const renderDashboard = () => (
     <div className="space-y-8">
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Published Posts
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.published}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Draft Posts</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.drafts}</div>
-          </CardContent>
-        </Card>
-      </div>
-
+      <BlogPostStats published={stats.published} drafts={stats.drafts} />
       <Card className="h-full shadow-none border-none">
         <CardHeader>
           <CardTitle>Recent Posts</CardTitle>
@@ -541,20 +361,15 @@ export default function BlogPostDisplay() {
       case "posts":
       case "drafts":
         return (
-          <Card className="h-full shadow-none border-none">
+          <Card className="h-full shadow-none border-none space-y-3">
             <CardHeader>
-              <CardTitle>
+              <CardTitle className="mb-2">
                 {activeTab === "posts" ? "Published Posts" : "Draft Posts"}
               </CardTitle>
-              <div className="relative">
-                <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
-                <Input
-                  placeholder="Search posts..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8 w-64"
-                />
-              </div>
+              <BlogPostSearch
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+              />
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[calc(100vh-340px)]">
@@ -584,9 +399,7 @@ export default function BlogPostDisplay() {
               <CardTitle>Settings</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">
-                Settings page coming soon...
-              </p>
+              <ImportExportData />
             </CardContent>
           </Card>
         );
@@ -709,34 +522,15 @@ export default function BlogPostDisplay() {
         </main>
       </div>
 
-      <AlertDialog
-        open={deleteConfirmation.isOpen}
+      <DeleteConfirmationDialog
+        isOpen={deleteConfirmation.isOpen}
         onOpenChange={(isOpen) => {
           if (!isOpen) handleDeleteCancelled();
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the
-              blog post.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isSubmitting}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirmed}
-              disabled={isSubmitting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        isSubmitting={isSubmitting}
+        onDeleteConfirmed={handleDeleteConfirmed}
+        onDeleteCancelled={handleDeleteCancelled}
+      />
     </div>
   );
 }

@@ -1,55 +1,86 @@
-import { NextResponse } from "next/server";
-import prisma from "@/lib/db";
+import db from "@/lib/db";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { slug: string } }
 ) {
+  const { slug } = params;
+
   try {
-    const post = await prisma.blogPost.findUnique({
-      where: { slug: params.slug },
-    });
-    if (!post) {
+    const [post] = await db.query("SELECT * FROM blog_posts WHERE slug = ?", [
+      slug,
+    ]);
+    if (post) {
+      return NextResponse.json(post);
+    } else {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
-    return NextResponse.json(post);
   } catch (error) {
-    console.error("Error fetching post:", error);
-    return NextResponse.json({ error: "Error fetching post" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch post" },
+      { status: 500 }
+    );
   }
 }
 
 export async function PUT(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { slug: string } }
 ) {
+  const { slug } = params;
+  const body = await request.json();
+
   try {
-    const body = await request.json();
-    const post = await prisma.blogPost.update({
-      where: { slug: params.slug },
-      data: {
-        ...body,
-        updated_at: new Date(),
-      },
-    });
-    return NextResponse.json(post);
+    const { title, content, content_preview, is_draft, ...rest } = body;
+    await db.run(
+      `UPDATE blog_posts 
+       SET title = ?, content = ?, content_preview = ?, is_draft = ?, 
+           author = ?, category = ?, meta_title = ?, meta_description = ?, 
+           label = ?, author_bio = ?, reading_time = ?, 
+           featured_image_url = ?, status = ?, images = ?,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE slug = ?`,
+      [
+        title,
+        content,
+        content_preview,
+        is_draft ? 1 : 0,
+        rest.author,
+        rest.category,
+        rest.meta_title,
+        rest.meta_description,
+        rest.label,
+        rest.author_bio,
+        rest.reading_time,
+        rest.featured_image_url,
+        rest.status,
+        rest.images,
+        slug,
+      ]
+    );
+    return NextResponse.json({ slug, ...body });
   } catch (error) {
-    console.error("Error updating post:", error);
-    return NextResponse.json({ error: "Error updating post" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to update post" },
+      { status: 500 }
+    );
   }
 }
 
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { slug: string } }
 ) {
+  const { slug } = params;
+
   try {
-    await prisma.blogPost.delete({
-      where: { slug: params.slug },
-    });
+    await db.run("DELETE FROM blog_posts WHERE slug = ?", [slug]);
     return NextResponse.json({ message: "Post deleted successfully" });
   } catch (error) {
-    console.error("Error deleting post:", error);
-    return NextResponse.json({ error: "Error deleting post" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to delete post" },
+      { status: 500 }
+    );
   }
 }

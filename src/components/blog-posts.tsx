@@ -1,18 +1,18 @@
-import prisma from "@/lib/db";
 import { Spinner } from "@/components/ui/spinner";
-import Link from "next/link";
-import { Metadata } from "next";
+import db from "@/lib/db";
 import { isNewPost } from "@/lib/helper";
+import { Metadata } from "next";
+import Link from "next/link";
 
 interface BlogPost {
   id: number;
   title: string;
   content: string;
   content_preview: string;
-  created_at: Date;
-  updated_at: Date;
+  created_at: string;
+  updated_at: string;
   slug: string;
-  is_draft: boolean;
+  is_draft: number;
   label: string;
 }
 
@@ -22,10 +22,9 @@ export const metadata: Metadata = {
 };
 
 export default async function BlogListPage() {
-  const blogPosts = await prisma.blogPost.findMany({
-    where: { is_draft: false },
-    orderBy: { created_at: "desc" },
-  });
+  const blogPosts: BlogPost[] = await db.query(
+    "SELECT * FROM blog_posts WHERE is_draft = 0 ORDER BY created_at DESC"
+  );
 
   return (
     <>
@@ -42,14 +41,13 @@ export default async function BlogListPage() {
                 >
                   {post.title}
                 </Link>
-                {post?.label === "new" &&
-                  isNewPost(post?.created_at.toString()) && (
-                    <span className="inline-flex items-center rounded-full bg-[#ff6b6b] px-1.5 py-0.5 text-xs font-medium text-white uppercase ml-3 mt-0.5">
-                      New
-                    </span>
-                  )}
+                {post?.label === "new" && isNewPost(post?.created_at) && (
+                  <span className="inline-flex items-center rounded-full bg-[#ff6b6b] px-1.5 py-0.5 text-xs font-medium text-white uppercase ml-3 mt-0.5">
+                    New
+                  </span>
+                )}
                 <span className="ml-3 text-sm text-primary/50 font-normal">
-                  {post.created_at.toLocaleDateString("en-US", {
+                  {new Date(post.created_at).toLocaleDateString("en-US", {
                     month: "2-digit",
                     year: "numeric",
                   })}

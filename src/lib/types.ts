@@ -1,4 +1,7 @@
 import { Content } from "@tiptap/react";
+
+export type TabType = "dashboard" | "posts" | "drafts" | "settings";
+
 export interface BlogPost {
   id: string; // UUID for the post
   title: string; // Title of the blog post

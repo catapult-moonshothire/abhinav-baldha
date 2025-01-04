@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "postinstall": "prisma generate && prisma migrate deploy",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -59,6 +58,8 @@
     "react-hook-form": "^7.53.1",
     "react-medium-image-zoom": "^5.2.10",
     "sonner": "^1.7.0",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7",
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.23.8"
