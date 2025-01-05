@@ -59,6 +59,16 @@ export default async function BlogPostPage({
     notFound();
   }
 
+  // Function to replace img tags with Next.js Image components
+  const replaceImagesWithNextImage = (content: string) => {
+    const imgRegex = /<img[^>]+src="([^">]+)"[^>]*>/g;
+    return content.replace(imgRegex, (match, src) => {
+      return `<Image src="${src}" alt="Blog post image" width={800} height={600} layout="responsive" />`;
+    });
+  };
+
+  const processedContent = replaceImagesWithNextImage(blogPost.content);
+
   return (
     <MainContainer>
       <main className="prose mx-auto flex-1 w-full max-w-3xl fobol py-4 sm:p-8 relative z-10">
@@ -73,7 +83,7 @@ export default async function BlogPostPage({
         <h1 className="text-4xl font-extrabold">{blogPost.title}</h1>
         <div
           className="mt-4"
-          dangerouslySetInnerHTML={{ __html: blogPost.content }}
+          dangerouslySetInnerHTML={{ __html: processedContent }}
         />
       </main>
     </MainContainer>

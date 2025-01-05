@@ -2,7 +2,14 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: ["vercel-blob.com", "localhost:3000", "abhinav-baldha.vercel.app"],
+    domains: ["localhost", "abhinavbaldha.com"],
+  },
+  webpack: (config) => {
+    config.module.rules.push({
+      test: /\.svg$/,
+      use: ["@svgr/webpack"],
+    });
+    return config;
   },
 };
 

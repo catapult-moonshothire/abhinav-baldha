@@ -13,8 +13,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Remove the extra 'images/' from the filename
-  filename = filename.replace(/^images\//, "");
+  // Remove any path information from the filename
+  filename = path.basename(filename);
 
   const file = await request.blob();
 
@@ -29,7 +29,8 @@ export async function POST(request: NextRequest) {
       Buffer.from(await file.arrayBuffer())
     );
 
-    const imageUrl = `/images/${filename}`;
+    // Use the Next.js Image Optimization API
+    const imageUrl = `/api/images/${filename}`;
 
     return NextResponse.json({
       url: imageUrl,
