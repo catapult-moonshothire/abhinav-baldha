@@ -51,9 +51,6 @@ const createExtensions = (placeholder: string) => [
     maxFileSize: 5 * 1024 * 1024,
     uploadFn: async (file) => {
       try {
-        const formData = new FormData();
-        formData.append("file", file);
-
         const filename = `${randomId()}-${file.name}`;
         const response = await fetch(
           `/api/upload-image?filename=${encodeURIComponent(filename)}`,
@@ -115,9 +112,6 @@ const createExtensions = (placeholder: string) => [
     onDrop: async (editor, files, pos) => {
       for (const file of files) {
         try {
-          const formData = new FormData();
-          formData.append("file", file);
-
           const filename = `${randomId()}-${file.name}`;
           const response = await fetch(
             `/api/upload-image?filename=${encodeURIComponent(filename)}`,
@@ -155,9 +149,6 @@ const createExtensions = (placeholder: string) => [
     onPaste: async (editor, files) => {
       for (const file of files) {
         try {
-          const formData = new FormData();
-          formData.append("file", file);
-
           const filename = `${randomId()}-${file.name}`;
           const response = await fetch(
             `/api/upload-image?filename=${encodeURIComponent(filename)}`,

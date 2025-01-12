@@ -29,8 +29,8 @@ export async function POST(request: NextRequest) {
       Buffer.from(await file.arrayBuffer())
     );
 
-    // Use the Next.js Image Optimization API
-    const imageUrl = `/api/images/${filename}`;
+    // Return the direct URL to the image
+    const imageUrl = `/images/${filename}`;
 
     return NextResponse.json({
       url: imageUrl,

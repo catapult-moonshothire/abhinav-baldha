@@ -41,8 +41,8 @@ export async function generateMetadata({
   }
 
   return {
-    title: `${blogPost.meta_title}`,
-    description: blogPost.meta_description,
+    title: blogPost?.meta_title || blogPost.title,
+    description: blogPost?.meta_description,
   };
 }
 
